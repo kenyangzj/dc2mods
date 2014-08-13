@@ -1,0 +1,47 @@
+<?php
+/**
+ * hook_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
+ */
+function dc2mods_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
+	
+	// We only care about when the DC datastream is modified
+	if ($datastream->id == 'DC') {
+		// transform the DC to MODS
+		
+		// Path of the XSL file used for the transformation,
+		// borrowing the xsl file from the islandora_importer/modules/zip_importer
+		$mods2dcXSL_file = drupal_get_path('module', 'zip_importer') . '/xsl/simpleDC2MODS.xsl';
+		
+		// Load the XSL file
+		$xsl = new DOMDocument();
+		$xsl->load($mods2dcXSL_file);
+		
+		// Load the DC xml string from the datastream
+		$input = new DOMDocument();
+		$input->loadXML($datastream->content);
+		
+		// Do the magic of transformation
+		$processor = new XSLTProcessor();
+		$processor->importStylesheet($xsl);
+		
+		$mods_XML_string =  $processor->transformToXML($input);
+
+		// Replace or create MODS with the new MODS from the XSL transformation
+		$dsid = 'MODS';
+		// Before we do anything, check if the datastream exists. If it does, load it; otherwise construct it.
+		$datastream = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream($dsid);
+		$datastream->label = 'MODS Record';
+		$datastream->mimeType = 'text/xml';
+		$datastream->setContentFromString($mods_XML_string);
+		// There's no harm in doing this if the datastream is already ingested or if the object is only constructed.
+		$object->ingestDatastream($datastream);
+	}
+}
+
+/**
+ * hook_islandora_datastream_ingested(AbstractObject $object, AbstractDatastream $datastream) {
+ */
+function dc2mods_islandora_datastream_ingested(AbstractObject $object, AbstractDatastream $datastream) {
+	// doing the same DC to MODS transformation
+	dc2mods_islandora_datastream_modified($object, $datastream);
+}

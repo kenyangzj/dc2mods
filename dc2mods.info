@@ -1,0 +1,5 @@
+name = DC to MODS
+description = A custom module that transforms DC datastream to MODS and attach it to the object
+core = 7.x
+dependencies[] = islandora
+dependencies[] = zip_importer
